@@ -1,0 +1,35 @@
+# Version of docker-compose to use 
+version: "3"
+
+services:
+  app: # This is the service for the Django application
+    build:
+      context: . # Sets the directory containing a Dockerfile .
+
+    # Maps port on the local machine to port on Docker image
+    ports:
+      - "8000:8000"
+      
+    volumes: 
+    # Copy changes made to the project to your image working directory as changes are made.
+      - .:/PANOpticon
+    
+    environment:
+      # The environment variable credentials that is needed 
+      # in django settings for Postgres to work.
+      - DB_HOST=pg
+      - DB_NAME=panopticon_db
+      - DB_USER=django-user
+      - DB_PASS='qpnk52P*;@K-'
+    depends_on:
+      - pg
+
+  pg:
+    image: postgres:14-bullseye
+    environment:
+    
+      # credentials required by postgres image
+      - DB_NAME=panopticon_db
+      - DB_USER=django-user
+      - DB_PASS='qpnk52P*;@K-'
+      
