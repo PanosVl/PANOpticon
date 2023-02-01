@@ -1,35 +1,40 @@
-# Version of docker-compose to use 
 version: "3"
 
 services:
-  app: # This is the service for the Django application
+  db:
+    image: postgres:14-bullseye
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/db:/var/lib/postgresql/data    
+    environment:
+      - POSTGRES_DB=panopticon_db
+      # - PGUSER='panoptis_postgres'
+      - POSTGRES_USER='panoptis_postgres'
+      - POSTGRES_PASSWORD='tIj!@;004rlkDFUBWEFfdsfx'
+    networks:
+      - djangonetwork
+      
+  app:
     build:
       context: . # Sets the directory containing a Dockerfile .
-
-    # Maps port on the local machine to port on Docker image
     ports:
       - "8000:8000"
-      
-    volumes: 
-    # Copy changes made to the project to your image working directory as changes are made.
+    volumes:
+      # Copy changes made to the project to image's working directory as changes are made.
       - .:/PANOpticon
-    
+    networks:
+      - djangonetwork
     environment:
-      # The environment variable credentials that is needed 
-      # in django settings for Postgres to work.
-      - DB_HOST=pg
-      - DB_NAME=panopticon_db
-      - DB_USER=django-user
-      - DB_PASS='qpnk52P*;@K-'
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=panopticon_db
+      - POSTGRES_USER='panoptis_postgres'
+      - POSTGRES_PASSWORD='tIj!@;004rlkDFUBWEFfdsfx'
     depends_on:
-      - pg
+      - db
+    restart: always
 
-  pg:
-    image: postgres:14-bullseye
-    environment:
-    
-      # credentials required by postgres image
-      - DB_NAME=panopticon_db
-      - DB_USER=django-user
-      - DB_PASS='qpnk52P*;@K-'
-      
+networks:
+  djangonetwork:
+    driver: bridge
+
