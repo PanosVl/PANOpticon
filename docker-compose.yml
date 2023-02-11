@@ -3,38 +3,27 @@ version: "3"
 services:
   db:
     image: postgres:14-bullseye
+    env_file: .docker_envfile
     ports:
       - "5432:5432"
     volumes:
-      - ./data/db:/var/lib/postgresql/data    
-    environment:
-      - POSTGRES_DB=panopticon_db
-      # - PGUSER='panoptis_postgres'
-      - POSTGRES_USER='panoptis_postgres'
-      - POSTGRES_PASSWORD='tIj!@;004rlkDFUBWEFfdsfx'
-    networks:
-      - djangonetwork
+      - ./db-data:/var/lib/postgresql/data
       
   app:
     build:
-      context: . # Sets the directory containing a Dockerfile .
+      context: .
     ports:
       - "8000:8000"
     volumes:
       # Copy changes made to the project to image's working directory as changes are made.
-      - .:/PANOpticon
-    networks:
-      - djangonetwork
-    environment:
-      - POSTGRES_HOST=db
-      - POSTGRES_DB=panopticon_db
-      - POSTGRES_USER='panoptis_postgres'
-      - POSTGRES_PASSWORD='tIj!@;004rlkDFUBWEFfdsfx'
+      - .:/PANOpticon/
+    env_file: .docker_envfile
     depends_on:
       - db
     restart: always
-
-networks:
-  djangonetwork:
-    driver: bridge
+    command: >
+      sh -c "python3 manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000
+             "
 
