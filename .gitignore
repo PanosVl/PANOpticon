@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 /data/
 panopticon/.env_tmp
+.docker_envfile
