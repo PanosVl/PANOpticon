@@ -1,0 +1,9 @@
+<h1>Search Results</h1>
+
+<ul>
+    {% for vulnerability in object_list %}
+    <li>
+        {{ vulnerability.cve_id }}, {{ vulnerability.epss }}, {{ vulnerability.actively_exploited }}
+    </li>
+    {% endfor %}
+</ul>
