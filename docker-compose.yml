@@ -7,9 +7,10 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./db-data:/var/lib/postgresql/data  # sudo chown -R 1000:1000 ./db-data
-    user: 1000:1000
-  
+      - ./db-data:/var/lib/postgresql/data:z
+      
+        # sudo chown -R 1000:1000 ./db-data
+
   app:
     build:
       context: .
@@ -27,4 +28,3 @@ services:
              python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000
              "
-
