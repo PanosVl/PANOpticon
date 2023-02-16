@@ -6,7 +6,7 @@ class Vulnerability(models.Model):
     cve_id = models.CharField(max_length=20)
     epss = models.CharField(max_length=20)
     actively_exploited = models.BooleanField(default=False)
-
+    date_discovered = models.DateField(default=None, null=True)
 
     class Meta:
       verbose_name_plural = "vulnerabilities"
