@@ -5,6 +5,7 @@ class Vulnerability(models.Model):
     id = models.AutoField(primary_key=True)
     cve_id = models.CharField(max_length=20)
     epss = models.CharField(max_length=20)
+    pulses = models.IntegerField(default=0, null=True)
     actively_exploited = models.BooleanField(default=False)
     date_discovered = models.DateField(default=None, null=True)
 

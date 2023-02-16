@@ -2,12 +2,12 @@ import requests
 import json
 from cve.models import *
 import datetime
+import os
 
 def get_EPSS(cve):
-    # url = 'https://services.nvd.nist.gov/rest/json/cve/1.0/' + cve
-    # r = requests.get(url)
-    # data = r.json()
-    # return data['result']['CVE_Items'][0]['cve']['affects']['vendor']['vendor_data'][0]['product']['product_data'][0]['version']['version_data'][0]['versionValue']
+    """
+    FIRST.org API to get EPSS score for a given CVE
+    """
     url = f"https://api.first.org/data/v1/epss?cve={cve}"
     r = requests.get(url)
     if r.ok:
@@ -19,12 +19,28 @@ def get_EPSS(cve):
         return None
 
 def get_basic_CVE_info_NVD(cve):
+    """
+    NVD NIST API to get basic information on a given CVE
+    """
     url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cve}"
     r = requests.get(url)
     if r.ok:
         return r.json()['vulnerabilities'][0]
     else:
         return None
+
+def pulse(cve):
+    """
+    AllienVault API to get pulse information & indicators for a given CVE
+    """
+    url = f"https://otx.alienvault.com/api/v1/indicators/cve/{cve}"
+    headers = {'X-OTX-API-KEY':os.environ['OTX_KEY']}
+    r = requests.get(url, headers=headers)
+    if r.ok:
+        try:
+            return r.json()['pulse_info']['count']
+        except KeyError:
+            return 0
 
 def load_up(json_file):
     """
@@ -41,5 +57,6 @@ def load_up(json_file):
                     cve_id = vulnerability_object['cveID'],
                     epss = epss,
                     actively_exploited = True,
+                    pulses = pulse(vulnerability_object['cveID']),
                     date_discovered = datetime.datetime.strptime(nvd_data['cve']['published'].split('T')[0], '%Y-%m-%d').date()
                 )
