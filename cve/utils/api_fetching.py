@@ -29,7 +29,7 @@ def get_basic_CVE_info_NVD(cve):
     else:
         return None
 
-def pulse(cve):
+def OTX_pulse(cve):
     """
     AllienVault API to get pulse information & indicators for a given CVE
     """
@@ -42,21 +42,21 @@ def pulse(cve):
         except KeyError:
             return 0
 
-def load_up(json_file):
+def get_all_KEV_NVD():
     """
-    Uses JSON file from CISA's Known Exploited Vulnerabilities (KEV) to pull information on the said CVEs and update the database
+    Queries NVD NIST API to get all Known Exploited Vulnerabilities (KEV) and write them in db
     """
-    with open(json_file) as json_file_stream:
-        data_dictionary = json.load(json_file_stream)
-
-        for vulnerability_object in data_dictionary['vulnerabilities']:
-            epss = get_EPSS(vulnerability_object['cveID'])
-            nvd_data = get_basic_CVE_info_NVD(vulnerability_object['cveID'])
-            if epss and nvd_data:
-                Vulnerability.objects.create(
-                    cve_id = vulnerability_object['cveID'],
-                    epss = epss,
-                    actively_exploited = True,
-                    pulses = pulse(vulnerability_object['cveID']),
-                    date_discovered = datetime.datetime.strptime(nvd_data['cve']['published'].split('T')[0], '%Y-%m-%d').date()
-                )
+    url = 'https://services.nvd.nist.gov/rest/json/cves/2.0?hasKev'
+    response = requests.get(url)
+    data = response.json()
+    for item in data['vulnerabilities']:
+        if not Vulnerability.objects.filter(cve_id=item['cve']['id']).exists():
+            epss = get_EPSS(item['cve']['id'])
+            
+            Vulnerability.objects.create(
+                cve_id = item['cve']['id'],
+                epss = epss,
+                actively_exploited = True,
+                pulses = OTX_pulse(item['cve']['id']),
+                date_discovered = datetime.datetime.strptime(item['cve']['published'].split('T')[0], '%Y-%m-%d').date()
+            )
