@@ -20,3 +20,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("", include("cve.urls"))
 ]
+
+admin.site.site_header  =  "PANOpticon"  
+admin.site.site_title  =  "Vulnerability Management"
+admin.site.index_title  =  "PANOpticon"
