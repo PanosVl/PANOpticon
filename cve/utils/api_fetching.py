@@ -50,13 +50,22 @@ def get_all_KEV_NVD():
     response = requests.get(url)
     data = response.json()
     for item in data['vulnerabilities']:
+        epss = get_EPSS(item['cve']['id'])
+        cve_id = item['cve']['id']
+        pulses = OTX_pulse(item['cve']['id'])
+        date = datetime.datetime.strptime(item['cve']['published'].split('T')[0], '%Y-%m-%d').date()
         if not Vulnerability.objects.filter(cve_id=item['cve']['id']).exists():
-            epss = get_EPSS(item['cve']['id'])
-            
+            # Create vulnerability            
             Vulnerability.objects.create(
-                cve_id = item['cve']['id'],
+                cve_id = cve_id,
                 epss = epss,
                 actively_exploited = True,
-                pulses = OTX_pulse(item['cve']['id']),
-                date_discovered = datetime.datetime.strptime(item['cve']['published'].split('T')[0], '%Y-%m-%d').date()
+                pulses = pulses,
+                date_discovered = date
             )
+        else:
+            # Update vulnerability
+            v = Vulnerability.objects.get(cve_id=cve_id)
+            v.epss = epss
+            v.pulses = pulses
+            v.save()           
