@@ -44,7 +44,8 @@ def OTX_pulse(cve):
 
 def get_all_KEV_NVD():
     """
-    Queries NVD NIST API to get all Known Exploited Vulnerabilities (KEV) and write them in db
+    Queries NVD NIST API to get all Known Exploited Vulnerabilities (KEV) and write them in db.
+    It can be run multiple times to update vulnerabilities.
     """
     url = 'https://services.nvd.nist.gov/rest/json/cves/2.0?hasKev'
     response = requests.get(url)
@@ -64,7 +65,7 @@ def get_all_KEV_NVD():
                 date_discovered = date
             )
         else:
-            # Update vulnerability
+            # Update vulnerability in case it already exists
             v = Vulnerability.objects.get(cve_id=cve_id)
             v.epss = epss
             v.pulses = pulses

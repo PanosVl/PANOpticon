@@ -8,7 +8,8 @@ class Vulnerability(models.Model):
     pulses = models.IntegerField(default=0, null=True)
     actively_exploited = models.BooleanField(default=False)
     date_discovered = models.DateField(default=None, null=True)
-
+    latest_update = models.DateField(auto_now=True, null=True)
+    
     class Meta:
       verbose_name_plural = "vulnerabilities"
 
