@@ -16,7 +16,7 @@ class ReadOnlyAdmin(admin.ModelAdmin):
         return [field.name for field in obj._meta.fields]
 
 class VulnerabilityAdmin(ReadOnlyAdmin):
-    list_display = ('cve_id', 'epss', 'pulses', 'actively_exploited', 'date_discovered')
-    search_fields = ('cve_id', 'epss', 'pulses', 'actively_exploited', 'date_discovered')
+    list_display = ('cve_id', 'epss', 'pulses', 'actively_exploited', 'date_discovered', 'latest_update')
+    search_fields = ('cve_id', 'epss', 'pulses', 'actively_exploited', 'date_discovered','latest_update')
 
 admin.site.register(Vulnerability, VulnerabilityAdmin)
