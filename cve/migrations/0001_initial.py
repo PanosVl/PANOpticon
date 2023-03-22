@@ -16,9 +16,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(primary_key=True, serialize=False)),
                 ('cve_id', models.CharField(max_length=20)),
-                ('epss', models.CharField(max_length=20)),
-                ('actively_exploited', models.BooleanField(default=False)),
-            ],
+                ('epss', models.CharField(max_length=20)),            ],
             options={
                 'verbose_name_plural': 'vulnerabilities',
             },

@@ -3,7 +3,7 @@
 <ul>
     {% for vulnerability in object_list %}
     <li>
-        {{ vulnerability.cve_id }}, {{ vulnerability.epss }}, {{ vulnerability.actively_exploited }}
+        {{ vulnerability.cve_id }}, {{ vulnerability.epss }}
     </li>
     {% endfor %}
 </ul>

@@ -60,9 +60,9 @@ def get_all_KEV_NVD():
             Vulnerability.objects.create(
                 cve_id = cve_id,
                 epss = epss,
-                actively_exploited = True,
-                pulses = pulses,
-                date_discovered = date
+                KEV = True,
+                pulses = OTX_pulse(item['cve']['id']),
+                date_discovered = datetime.datetime.strptime(item['cve']['published'].split('T')[0], '%Y-%m-%d').date()
             )
         else:
             # Update vulnerability in case it already exists
