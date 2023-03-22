@@ -1,8 +1,9 @@
-from django.urls import path
-
+from django.contrib import admin
+from django.urls import path, reverse_lazy
+from django.views.generic.base import RedirectView
 from cve.views import *
 
 urlpatterns = [
-    path("search/", SearchResultsView.as_view(), name="search_results"),
-    path("", HomePageView.as_view(), name="home"),
+    path('', RedirectView.as_view(url=reverse_lazy('admin:index'))),
+    path('admin/', admin.site.urls),
 ]

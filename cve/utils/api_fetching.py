@@ -3,6 +3,24 @@ import json
 from cve.models import *
 import datetime
 import os
+from pyExploitDb import PyExploitDb
+
+# Initialize clone of exploit-db
+pEdb = PyExploitDb()
+pEdb.debug = False
+pEdb.openFile()
+
+
+def exploit_db_poc(cve):
+    """
+    Searches exploit db for the given CVE. 
+    If a PoC exploit exists, it returns True, and False otherwise.
+    """
+    results = pEdb.searchCve(cve)
+    if results:
+        return True
+    else:
+        return False
 
 def get_EPSS(cve):
     """
@@ -44,29 +62,20 @@ def OTX_pulse(cve):
 
 def get_all_KEV_NVD():
     """
-    Queries NVD NIST API to get all Known Exploited Vulnerabilities (KEV) and write them in db.
-    It can be run multiple times to update vulnerabilities.
+    Queries NVD NIST API to get all Known Exploited Vulnerabilities (KEV) and write them in db
     """
     url = 'https://services.nvd.nist.gov/rest/json/cves/2.0?hasKev'
     response = requests.get(url)
     data = response.json()
     for item in data['vulnerabilities']:
-        epss = get_EPSS(item['cve']['id'])
-        cve_id = item['cve']['id']
-        pulses = OTX_pulse(item['cve']['id'])
-        date = datetime.datetime.strptime(item['cve']['published'].split('T')[0], '%Y-%m-%d').date()
         if not Vulnerability.objects.filter(cve_id=item['cve']['id']).exists():
-            # Create vulnerability            
+            epss = get_EPSS(item['cve']['id'])
+            
             Vulnerability.objects.create(
-                cve_id = cve_id,
+                cve_id = item['cve']['id'],
                 epss = epss,
                 KEV = True,
                 pulses = OTX_pulse(item['cve']['id']),
-                date_discovered = datetime.datetime.strptime(item['cve']['published'].split('T')[0], '%Y-%m-%d').date()
+                date_discovered = datetime.datetime.strptime(item['cve']['published'].split('T')[0], '%Y-%m-%d').date(),
+                exploit_db = exploit_db_poc(item['cve']['id'])
             )
-        else:
-            # Update vulnerability in case it already exists
-            v = Vulnerability.objects.get(cve_id=cve_id)
-            v.epss = epss
-            v.pulses = pulses
-            v.save()           
