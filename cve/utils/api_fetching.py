@@ -10,10 +10,9 @@ pEdb = PyExploitDb()
 pEdb.debug = False
 pEdb.openFile()
 
-
 def exploit_db_poc(cve):
     """
-    Searches exploit db for the given CVE. 
+    Searches exploit db for the given CVE.
     If a PoC exploit exists, it returns True, and False otherwise.
     """
     results = pEdb.searchCve(cve)
@@ -40,11 +39,12 @@ def get_basic_CVE_info_NVD(cve):
     """
     NVD NIST API to get basic information on a given CVE
     """
-    url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cve}"
+    url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cve}&apiKey={os.environ['NVD_API_KEY']}"
     r = requests.get(url)
     if r.ok:
         return r.json()['vulnerabilities'][0]
     else:
+        print(r.text, r.status_code)
         return None
 
 def OTX_pulse(cve):
@@ -64,18 +64,20 @@ def get_all_KEV_NVD():
     """
     Queries NVD NIST API to get all Known Exploited Vulnerabilities (KEV) and write them in db
     """
-    url = 'https://services.nvd.nist.gov/rest/json/cves/2.0?hasKev'
+    url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?hasKev&apiKey={os.environ['NVD_API_KEY']}"
     response = requests.get(url)
     data = response.json()
     for item in data['vulnerabilities']:
         if not Vulnerability.objects.filter(cve_id=item['cve']['id']).exists():
-            epss = get_EPSS(item['cve']['id'])
-            
-            Vulnerability.objects.create(
-                cve_id = item['cve']['id'],
-                epss = epss,
-                KEV = True,
-                pulses = OTX_pulse(item['cve']['id']),
-                date_discovered = datetime.datetime.strptime(item['cve']['published'].split('T')[0], '%Y-%m-%d').date(),
-                exploit_db = exploit_db_poc(item['cve']['id'])
-            )
+            nvd_data = get_basic_CVE_info_NVD(item['cve'])
+            if nvd_data:
+                Vulnerability.objects.create(
+                    cve_id = item['cve']['id'],
+                    epss = get_EPSS(item['cve']['id']),
+                    cvss = nvd_data['metrics']['cvssMetricV31']['cvssData']['baseScore'],
+                    attack_vector = nvd_data['metrics']['cvssMetricV31']['cvssData']['attackVector'],
+                    pulses = OTX_pulse(item['cve']['id']),
+                    date_discovered = datetime.datetime.strptime(item['cve']['published'].split('T')[0], '%Y-%m-%d').date(),
+                    KEV = True,
+                    exploit_db = exploit_db_poc(item['cve']['id'])
+                )
