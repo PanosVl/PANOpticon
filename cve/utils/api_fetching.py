@@ -72,17 +72,23 @@ def get_all_KEV_NVD():
         if not Vulnerability.objects.filter(cve_id=item['cve']['id']).exists():
             nvd_data = get_basic_CVE_info_NVD(item['cve']['id'])
             if nvd_data:
+                cvss = attack_vector = None
                 try:
                     cvss = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore'],
                     attack_vector = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['attackVector'],
-                except KeyError:  # it didn't find CVSS v3.1, try for v2
-                    try:
-                        cvss = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore'],
-                        attack_vector = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['attackVector'],
-                    except KeyError:  # it didn't find CVSS v2, print out what you found and move on
-                        print(nvd_data['cve']['metrics'].keys())
-                        print(item['cve']['id'])
-                        cvss = attack_vector = None
+                except KeyError as e:  # it didn't find CVSS v3.1, try for v2
+                    print('no cvss 3.1')
+                    print(str(e))
+                    pass                
+                try:
+                    print("CVSS v3.1 not found, trying for CVSS 2:")
+                    cvss = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore'],                        
+                    attack_vector = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['accessVector'],
+                except KeyError as e:  # it didn't find CVSS v2, print out what you found and move on
+                    print('no cvss 2')
+                    print(str(e))
+                    pass
+                
                 Vulnerability.objects.create(
                     cve_id = item['cve']['id'],
                     epss = get_EPSS(item['cve']['id']),
