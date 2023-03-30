@@ -73,8 +73,8 @@ def get_all_KEV_NVD():
             nvd_data = get_basic_CVE_info_NVD(item['cve']['id'])
             if nvd_data:
                 try:
-                    cvss = nvd_data['cve']['metrics']['cvssMetricV31']['cvssData']['baseScore'],
-                    attack_vector = nvd_data['cve']['metrics']['cvssMetricV31']['cvssData']['attackVector'],
+                    cvss = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore'],
+                    attack_vector = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['attackVector'],
                 except KeyError:  # it didn't find CVSS v3.1, try for v2
                     try:
                         cvss = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore'],
