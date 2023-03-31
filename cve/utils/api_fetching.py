@@ -5,6 +5,14 @@ import datetime
 import os
 from pyExploitDb import PyExploitDb
 import time
+import logging
+
+# Initialize logger
+logger = logging.getLogger(__name__)
+file_handler = logging.FileHandler('app.log')
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 # Initialize clone of exploit-db
 pEdb = PyExploitDb()
@@ -69,34 +77,41 @@ def get_all_KEV_NVD():
     response = requests.get(url, headers={'apiKey': os.environ['NVD_API_KEY']})
     data = response.json()
     for item in data['vulnerabilities']:
-        if not Vulnerability.objects.filter(cve_id=item['cve']['id']).exists():
-            nvd_data = get_basic_CVE_info_NVD(item['cve']['id'])
-            if nvd_data:
-                cvss = attack_vector = None
-                try:
-                    cvss = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore'],
-                    attack_vector = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['attackVector'],
-                except KeyError as e:  # it didn't find CVSS v3.1, try for v2
-                    print('no cvss 3.1')
-                    print(str(e))
-                    pass                
-                try:
-                    print("CVSS v3.1 not found, trying for CVSS 2:")
-                    cvss = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore'],                        
-                    attack_vector = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['accessVector'],
-                except KeyError as e:  # it didn't find CVSS v2, print out what you found and move on
-                    print('no cvss 2')
-                    print(str(e))
-                    pass
-                
-                Vulnerability.objects.create(
-                    cve_id = item['cve']['id'],
-                    epss = get_EPSS(item['cve']['id']),
-                    pulses = OTX_pulse(item['cve']['id']),
-                    cvss = cvss,
-                    attack_vector = attack_vector,
-                    date_discovered = datetime.datetime.strptime(item['cve']['published'].split('T')[0], '%Y-%m-%d').date(),
-                    KEV = True,
-                    exploit_db = exploit_db_poc(item['cve']['id'])
-                )
-            time.sleep(6)  # Add 6" sleep to avoid being throttled out by NIST's API
+        try:
+            if not Vulnerability.objects.filter(cve_id=item['cve']['id']).exists():
+                nvd_data = get_basic_CVE_info_NVD(item['cve']['id'])
+                if nvd_data:
+                    cvss = attack_vector = None
+                    try:
+                        cvss = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore'],
+                        attack_vector = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['attackVector'],
+                    except KeyError as e:  # it didn't find CVSS v3.1, try for v2
+                        logger.warning('no cvss 3.1')
+                        logger.warning(str(e))
+                        pass                
+                    try:
+                        logger.warning("CVSS v3.1 not found, trying for CVSS 2:")
+                        cvss = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore'],                        
+                        attack_vector = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['accessVector'],
+                    except KeyError as e:  # it didn't find CVSS v2, print out what you found and move on
+                        logger.warning('no cvss 2')
+                        logger.warning(str(e))
+                        pass
+                    
+                    Vulnerability.objects.create(
+                        cve_id = item['cve']['id'],
+                        epss = get_EPSS(item['cve']['id']),
+                        pulses = OTX_pulse(item['cve']['id']),
+                        cvss = cvss,
+                        attack_vector = attack_vector,
+                        date_discovered = datetime.datetime.strptime(item['cve']['published'].split('T')[0], '%Y-%m-%d').date(),
+                        KEV = True,
+                        exploit_db = exploit_db_poc(item['cve']['id'])
+                    )
+                time.sleep(6)  # Add 6" sleep to avoid being throttled out by NIST's API
+        except Exception as e:
+            logger.error(f"Exception occured: {str(e)}")
+            logger.error(f"cve_ID: {item['cve']['id']}")
+            logger.error(f"epss: {get_EPSS(item['cve']['id'])}")
+            logger.error(f"CVSS: {cvss}")
+            logger.error(f"Attack Vector: {attack_vector}")
