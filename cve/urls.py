@@ -4,6 +4,7 @@ from django.views.generic.base import RedirectView
 from cve.views import *
 
 urlpatterns = [
-    path('', RedirectView.as_view(url=reverse_lazy('admin:index'))),
+    # path('', RedirectView.as_view(url=reverse_lazy('admin:index'))),
+    path('', home, name='home'),
     path('admin/', admin.site.urls),
 ]

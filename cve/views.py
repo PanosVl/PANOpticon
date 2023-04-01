@@ -1,11 +1,9 @@
-from django.views.generic import TemplateView, ListView
-
+from django.shortcuts import render
+from django.conf import settings
 from cve.models import *
 
-class HomePageView(TemplateView):
-    template_name = "home.html"
+def home(request):
+    context =  {'server_name': settings.SERVER_NAME}
+    return render(request, 'home.html', context)
 
-class SearchResultsView(ListView):
-    model = Vulnerability
-    template_name = "search_results.html"
 

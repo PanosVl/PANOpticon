@@ -1,1 +1,12 @@
-<h1>PANOpticon</h1>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-image">
+  <div class="hero-text">
+    <h1>This is PANOpticon</h1>
+    <p>Here you can find centralized Cyber Threat Intelligence from NIST, FIRST.org, Alien Vault, Exploit DB. Try searching using a CVE ID in the admin panel.</p>
+    <a href="http://{{ server_name }}:8000/admin" class="btn btn-primary">Go to Admin</a>
+  </div>
+</div>
+
+{% endblock %}

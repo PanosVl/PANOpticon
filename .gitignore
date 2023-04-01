@@ -133,3 +133,4 @@ panopticon/.env_tmp
 .docker_envfile
 db-data/
 *.json
+staticfiles/
