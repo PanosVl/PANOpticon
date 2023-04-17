@@ -19,6 +19,7 @@ pEdb = PyExploitDb()
 pEdb.debug = False
 pEdb.openFile()
 
+
 def exploit_db_poc(cve):
     """
     Searches exploit db for the given CVE.
@@ -29,6 +30,7 @@ def exploit_db_poc(cve):
         return True
     else:
         return False
+
 
 def get_EPSS(cve):
     """
@@ -44,11 +46,12 @@ def get_EPSS(cve):
     else:
         return None
 
+
 def get_basic_CVE_info_NVD(cve):
     """
     NVD NIST API to get basic information on a given CVE
     """
-    url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cve}"    
+    url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cve}"
     r = requests.get(url, headers={'apiKey': os.environ['NVD_API_KEY']})
     if r.ok:
         return r.json()['vulnerabilities'][0]
@@ -56,12 +59,13 @@ def get_basic_CVE_info_NVD(cve):
         print(r.text, r.status_code)
         return None
 
+
 def OTX_pulse(cve):
     """
     AllienVault API to get pulse information & indicators for a given CVE
     """
     url = f"https://otx.alienvault.com/api/v1/indicators/cve/{cve}"
-    headers = {'X-OTX-API-KEY':os.environ['OTX_KEY']}
+    headers = {'X-OTX-API-KEY': os.environ['OTX_KEY']}
     r = requests.get(url, headers=headers)
     if r.ok:
         try:
@@ -69,13 +73,11 @@ def OTX_pulse(cve):
         except KeyError:
             return 0
 
-def get_all_KEV_NVD():
+
+def create_objects(data):
     """
-    Queries NVD NIST API to get all Known Exploited Vulnerabilities (KEV) and write them in db
+    Expects a dictionary of CVEs from NVD NIST API.
     """
-    url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?hasKev&"    
-    response = requests.get(url, headers={'apiKey': os.environ['NVD_API_KEY']})
-    data = response.json()
     for item in data['vulnerabilities']:
         try:
             if not Vulnerability.objects.filter(cve_id=item['cve']['id']).exists():
@@ -88,27 +90,30 @@ def get_all_KEV_NVD():
                     except KeyError as e:  # it didn't find CVSS v3.1, try for v2
                         logger.warning('no cvss 3.1')
                         logger.warning(str(e))
-                        pass                
+                        pass
                     try:
-                        logger.warning("CVSS v3.1 not found, trying for CVSS 2:")
-                        cvss = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore'],                        
+                        logger.warning(
+                            "CVSS v3.1 not found, trying for CVSS 2:")
+                        cvss = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore'],
                         attack_vector = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['accessVector'],
                     except KeyError as e:  # it didn't find CVSS v2, print out what you found and move on
                         logger.warning('no cvss 2')
                         logger.warning(str(e))
                         pass
-                    
+
                     Vulnerability.objects.create(
-                        cve_id = item['cve']['id'],
-                        epss = get_EPSS(item['cve']['id']),
-                        pulses = OTX_pulse(item['cve']['id']),
-                        cvss = cvss,
-                        attack_vector = attack_vector,
-                        date_discovered = datetime.datetime.strptime(item['cve']['published'].split('T')[0], '%Y-%m-%d').date(),
-                        KEV = True,
-                        exploit_db = exploit_db_poc(item['cve']['id'])
+                        cve_id=item['cve']['id'],
+                        epss=get_EPSS(item['cve']['id']),
+                        pulses=OTX_pulse(item['cve']['id']),
+                        cvss=cvss,
+                        attack_vector=attack_vector,
+                        date_discovered=datetime.datetime.strptime(
+                            item['cve']['published'].split('T')[0], '%Y-%m-%d').date(),
+                        KEV=True,
+                        exploit_db=exploit_db_poc(item['cve']['id'])
                     )
-                time.sleep(6)  # Add 6" sleep to avoid being throttled out by NIST's API
+                # Add 6" sleep to avoid being throttled out by NIST's API
+                time.sleep(6)
         except Exception as e:
             logger.error(f"Exception occured: {str(e)}")
             logger.error(f"cve_ID: {item['cve']['id']}")
@@ -116,9 +121,20 @@ def get_all_KEV_NVD():
             logger.error(f"CVSS: {cvss}")
             logger.error(f"Attack Vector: {attack_vector}")
 
+
+def get_all_KEV_NVD():
+    """
+    Queries NVD NIST API to get all Known Exploited Vulnerabilities (KEV) and write them in db
+    """
+    url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?hasKev&"
+    response = requests.get(url, headers={'apiKey': os.environ['NVD_API_KEY']})
+    data = response.json()
+    create_objects(data)
+
+
 def get_statistics():
     """
-    Returns Efficiency & Coverage compared to CVSS and EPSS based metrics. 
+    Returns Efficiency & Coverage compared to CVSS and EPSS based metrics.
     Efficiency = TP / (TP + FP)
     Coverage = TP / (TP + FN)
     TP = True Positive
@@ -139,4 +155,57 @@ def get_statistics():
     print(f"CVSS Efficiency: {efficiency_cvss} %")
     print(f"EPSS Efficiency: {efficiency_epss} %")
     print(f"CVSS Coverage: {coverage_cvss} %")
-    print(f"CVSS Coverage: {coverage_epss} %")
+    print(f"EPSS Coverage: {coverage_epss} %")
+
+
+def get_cves_by_year(year):
+    """
+    Retrieves all CVEs published in the specified year from the NVD CVE feeds API.
+    year: string "YYYY"
+    """
+    # Set the base URL for the NVD CVE feeds API
+    base_url = 'https://services.nvd.nist.gov/rest/json/cves/2.0'
+
+    # Read the NVD API key from an environment variable
+    api_key = os.environ.get('NVD_API_KEY')
+
+    # Define the query parameters to retrieve CVEs published in the specified year
+    params = {
+        "publishedStartDate": f"{year}-01-01T00:00:00:000 UTC-05:00",
+        "publishedEndDate": f"{year}-12-31T23:59:59:999 UTC-05:00",
+        "resultsPerPage": 5000,  # Maximum number of results per page
+    }
+    headers = {"apiKey": api_key}
+
+    cves = []
+    page_num = 0
+    while True:
+        try:
+            # Increment the page number
+            page_num += 1
+
+            # Set the start index for the next page of results
+            params['startIndex'] = (page_num - 1) * params['resultsPerPage']
+
+            # Send a GET request to the NVD CVE feeds API to retrieve the CVEs
+            response = requests.get(base_url, params=params, headers=headers)
+
+            # Extract the list of CVEs from the response JSON
+            data = response.json()
+            create_objects(data)
+
+            # Append the CVEs to the list of all CVEs
+            # cves.extend(data['result']['CVE_Items'])
+
+            # Check if there are any more pages of results
+            if len(data['vulnerabilities']) < params['resultsPerPage']:
+                break
+        except Exception as e:
+            print(
+                f"There was an exception while trying to create objects: {e}")
+            print(response.text, response.status_code)
+
+    # Print the total number of CVEs retrieved
+    print(f"Number of CVEs published in {year}: {len(cves)}")
+
+    return cves
