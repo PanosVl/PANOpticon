@@ -1,5 +1,4 @@
 import requests
-import json
 from cve.models import *
 import datetime
 import os
@@ -170,42 +169,45 @@ def get_cves_by_year(year):
     api_key = os.environ.get('NVD_API_KEY')
 
     # Define the query parameters to retrieve CVEs published in the specified year
-    params = {
-        "publishedStartDate": f"{year}-01-01T00:00:00:000 UTC-05:00",
-        "publishedEndDate": f"{year}-12-31T23:59:59:999 UTC-05:00",
-        "resultsPerPage": 5000,  # Maximum number of results per page
-    }
-    headers = {"apiKey": api_key}
-
+    # The maximum allowable range when using any date range parameters is 120 consecutive days.
+    # We'll break it down into 4 intervals of maximum 119 days each.
     cves = []
-    page_num = 0
-    while True:
-        try:
-            # Increment the page number
-            page_num += 1
+    for i in range(4):
+        start_date = datetime.datetime.strptime(
+            f"{year}-01-01", '%Y-%m-%d') + datetime.timedelta(days=i*119)
+        end_date = datetime.datetime.strptime(
+            f"{year}-01-01", '%Y-%m-%d') + datetime.timedelta(days=(i+1)*119-1)
+        params = {
+            "pubStartDate": start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+            "pubEndDate": end_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+            "resultsPerPage": 2000,  # Maximum number of results per page
+        }
+        headers = {"apiKey": api_key}
 
-            # Set the start index for the next page of results
-            params['startIndex'] = (page_num - 1) * params['resultsPerPage']
+        page_num = 0
+        while True:
+            try:
+                # Increment the page number
+                page_num += 1
 
-            # Send a GET request to the NVD CVE feeds API to retrieve the CVEs
-            response = requests.get(base_url, params=params, headers=headers)
+                # Set the start index for the next page of results
+                params['startIndex'] = (page_num - 1) * \
+                    params['resultsPerPage']
 
-            # Extract the list of CVEs from the response JSON
-            data = response.json()
-            create_objects(data)
+                # Send a GET request to the NVD CVE feeds API to retrieve the CVEs
+                response = requests.get(
+                    base_url, params=params, headers=headers)
 
-            # Append the CVEs to the list of all CVEs
-            # cves.extend(data['result']['CVE_Items'])
+                # Extract the list of CVEs from the response JSON
+                data = response.json()
+                create_objects(data)
 
-            # Check if there are any more pages of results
-            if len(data['vulnerabilities']) < params['resultsPerPage']:
-                break
-        except Exception as e:
-            print(
-                f"There was an exception while trying to create objects: {e}")
-            print(response.text, response.status_code)
-
-    # Print the total number of CVEs retrieved
-    print(f"Number of CVEs published in {year}: {len(cves)}")
-
-    return cves
+                # Check if there are any more pages of results
+                if len(data['result']['CVE_Items']) < params['resultsPerPage']:
+                    break
+            except Exception as e:
+                print(
+                    f"There was an exception while trying to retrieve CVEs for interval {i}: {e}")
+                print(response.text, response.status_code)
+                print(base_url, params, headers)
+    return f"Finished import for {year}"
