@@ -35,4 +35,4 @@ Django is available on port 8000 and Postgres on port 5432.
 
   ### Application Diagram
   The application is quite simple on its design, consisting of the Django application, that writes to a Postgres database. The complex part is the extraction of data from the various sources. The diagram that follows shows the sources used and an overview of the app.  
-  ![broken image, sorry](https://drive.google.com/file/d/1RWmDrUCkxJwe5-KKmY7iuXl_AkRU_IqH/view?usp=share_link). 
+  ![architecture](https://user-images.githubusercontent.com/8208803/233793902-daaf8d90-a5dc-43cd-a83c-f88926f28896.png)
