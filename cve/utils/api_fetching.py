@@ -2,9 +2,14 @@ import requests
 from cve.models import *
 import datetime
 import os
-from pyExploitDb import PyExploitDb
 import time
 import logging
+from pyExploitDb import PyExploitDb
+
+# Initialize clone of exploit-db
+pEdb = PyExploitDb()
+pEdb.debug = False
+pEdb.openFile()
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -12,12 +17,6 @@ file_handler = logging.FileHandler('app.log')
 formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
-
-# Initialize clone of exploit-db
-pEdb = PyExploitDb()
-pEdb.debug = False
-pEdb.openFile()
-
 
 def exploit_db_poc(cve):
     """
@@ -82,9 +81,10 @@ def create_objects(data):
             if not Vulnerability.objects.filter(cve_id=item['cve']['id']).exists():
                 nvd_data = get_basic_CVE_info_NVD(item['cve']['id'])
                 if nvd_data:
-                    cvss = attack_vector = None
+                    cvss = attack_vector = cvss_version = None
                     try:
                         cvss = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore'],
+                        cvss_version = '3.1'
                         attack_vector = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['attackVector'],
                     except KeyError as e:  # it didn't find CVSS v3.1, try for v2
                         logger.warning('no cvss 3.1')
@@ -94,6 +94,7 @@ def create_objects(data):
                         logger.warning(
                             "CVSS v3.1 not found, trying for CVSS 2:")
                         cvss = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore'],
+                        cvss_version = '2'
                         attack_vector = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['accessVector'],
                     except KeyError as e:  # it didn't find CVSS v2, print out what you found and move on
                         logger.warning('no cvss 2')
@@ -105,6 +106,7 @@ def create_objects(data):
                         epss=get_EPSS(item['cve']['id']),
                         pulses=OTX_pulse(item['cve']['id']),
                         cvss=cvss,
+                        cvss_version=cvss_version,
                         attack_vector=attack_vector,
                         date_discovered=datetime.datetime.strptime(
                             item['cve']['published'].split('T')[0], '%Y-%m-%d').date(),
@@ -171,7 +173,6 @@ def get_cves_by_year(year):
     # Define the query parameters to retrieve CVEs published in the specified year
     # The maximum allowable range when using any date range parameters is 120 consecutive days.
     # We'll break it down into 4 intervals of maximum 119 days each.
-    cves = []
     for i in range(4):
         start_date = datetime.datetime.strptime(
             f"{year}-01-01", '%Y-%m-%d') + datetime.timedelta(days=i*119)
@@ -183,9 +184,10 @@ def get_cves_by_year(year):
             "resultsPerPage": 2000,  # Maximum number of results per page
         }
         headers = {"apiKey": api_key}
-
+        print(params)
         page_num = 0
         while True:
+            print("Entered loop")
             try:
                 # Increment the page number
                 page_num += 1
@@ -201,9 +203,9 @@ def get_cves_by_year(year):
                 # Extract the list of CVEs from the response JSON
                 data = response.json()
                 create_objects(data)
-
+                print(f"There were {len(data['vulnerabilities'])} vulnerabilities in this response page.")
                 # Check if there are any more pages of results
-                if len(data['result']['CVE_Items']) < params['resultsPerPage']:
+                if len(data['vulnerabilities']) < params['resultsPerPage']:
                     break
             except Exception as e:
                 print(
