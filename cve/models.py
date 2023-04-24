@@ -6,6 +6,7 @@ class Vulnerability(models.Model):
     cve_id = models.CharField(max_length=20, unique=True)
     epss = models.CharField(max_length=20, null=True)
     cvss = models.CharField(max_length=20, null=True)
+    cvss_vesrion = models.CharField(max_length=20, null=True)
     attack_vector = models.CharField(max_length=40, null=True)
     pulses = models.IntegerField(default=0, null=True)
     date_discovered = models.DateField(default=None, null=True)
