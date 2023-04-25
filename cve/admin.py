@@ -37,21 +37,10 @@ class VulnerabilityAdmin(ReadOnlyAdmin):
             # Fetch the CVE details from the external API
             # TODO: Call function to fetch all information about that specific CVE
             print("CVE not found in database, fetching from external API...")
-            # cve_data = fetch_cve_details(search_term)
-            # if cve_data:
-            #     # Create a new Vulnerability object with the fetched data
-            #     vulnerability = Vulnerability.objects.create(
-            #         cve_id=cve_data['cve']['CVE_data_meta']['ID'],
-            #         epss=get_EPSS(cve_data['cve']['CVE_data_meta']['ID']),
-            #         cvss=cve_data['impact']['baseMetricV3']['cvssV3']['baseScore'],
-            #         attack_vector=cve_data['impact']['baseMetricV3']['cvssV3']['attackVector'],
-            #         date_discovered=datetime.datetime.strptime(cve_data['publishedDate'], '%Y-%m-%dT%H:%MZ').date(),
-            #         KEV=True,
-            #         exploit_db=exploit_db_poc(cve_data['cve']['CVE_data_meta']['ID'])
-            #     )
-            #     # Return the newly created Vulnerability object as the search result
-            #     return [vulnerability], False
-            return False
+            vulnerability = get_one_by_CVE(search_term)
+            
+            # Return the newly created Vulnerability object as the search result (QS)
+            return Vulnerability.objects.filter(id=vulnerability.id), False            
 
         return queryset, use_distinct
 

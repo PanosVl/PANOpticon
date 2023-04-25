@@ -204,6 +204,7 @@ def get_cves_by_year(year):
                 data = response.json()
                 create_objects(data)
                 print(f"There were {len(data['vulnerabilities'])} vulnerabilities in this response page.")
+                print(f"There were {params['resultsPerPage']} results configured with params.")
                 # Check if there are any more pages of results
                 if len(data['vulnerabilities']) < params['resultsPerPage']:
                     break
@@ -213,3 +214,43 @@ def get_cves_by_year(year):
                 print(response.text, response.status_code)
                 print(base_url, params, headers)
     return f"Finished import for {year}"
+
+
+def get_one_by_CVE(cve):
+    nvd_data = get_basic_CVE_info_NVD(cve)
+    if nvd_data:
+        cvss = attack_vector = cvss_version = None
+        try:
+            cvss = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore'],
+            cvss_version = '3.1'
+            attack_vector = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['attackVector'],
+        except KeyError as e:  # it didn't find CVSS v3.1, try for v2
+            logger.warning('no cvss 3.1')
+            logger.warning(str(e))
+            pass
+        try:
+            logger.warning(
+                "CVSS v3.1 not found, trying for CVSS 2:")
+            cvss = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['baseScore'],
+            cvss_version = '2'
+            attack_vector = nvd_data['cve']['metrics']['cvssMetricV2'][0]['cvssData']['accessVector'],
+        except KeyError as e:  # it didn't find CVSS v2, print out what you found and move on
+            logger.warning('no cvss 2')
+            logger.warning(str(e))
+            pass
+
+        v = Vulnerability.objects.create(
+            cve_id=cve,
+            epss=get_EPSS(cve),
+            pulses=OTX_pulse(cve),
+            cvss=cvss,
+            cvss_version=cvss_version,
+            attack_vector=attack_vector,
+            date_discovered=datetime.datetime.strptime(
+                nvd_data['cve']['published'].split('T')[0], '%Y-%m-%d').date(),
+            KEV=True,
+            exploit_db=exploit_db_poc(cve)
+        )
+        return v
+    else:
+        return None
