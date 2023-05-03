@@ -18,6 +18,7 @@ formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
+
 def exploit_db_poc(cve):
     """
     Searches exploit db for the given CVE.
@@ -133,32 +134,6 @@ def get_all_KEV_NVD():
     create_objects(data)
 
 
-def get_statistics():
-    """
-    Returns Efficiency & Coverage compared to CVSS and EPSS based metrics.
-    Efficiency = TP / (TP + FP)
-    Coverage = TP / (TP + FN)
-    TP = True Positive
-    FP = False Positive
-    FN = False Negative
-    We assume prioritization is done on CVSS >= 7 and EPSS >= 0.150
-    """
-    tp_cvss = Vulnerability.objects.filter(cvss__gte=7, KEV=True).count()
-    fp_cvss = Vulnerability.objects.filter(cvss__gte=7, KEV=False).count()
-    fn_cvss = Vulnerability.objects.filter(cvss__lt=7, KEV=True).count()
-    tp_epss = Vulnerability.objects.filter(epss__gte=0.150, KEV=True).count()
-    fp_epss = Vulnerability.objects.filter(epss__gte=0.150, KEV=False).count()
-    fn_epss = Vulnerability.objects.filter(epss__lt=0.150, KEV=True).count()
-    efficiency_cvss = (tp_cvss / (tp_cvss + fp_cvss)) * 100
-    coverage_cvss = (tp_cvss / (tp_cvss + fn_cvss)) * 100
-    efficiency_epss = (tp_epss / (tp_epss + fp_epss)) * 100
-    coverage_epss = (tp_epss / (tp_epss + fn_epss)) * 100
-    print(f"CVSS Efficiency: {efficiency_cvss} %")
-    print(f"EPSS Efficiency: {efficiency_epss} %")
-    print(f"CVSS Coverage: {coverage_cvss} %")
-    print(f"EPSS Coverage: {coverage_epss} %")
-
-
 def get_cves_by_year(year):
     """
     Retrieves all CVEs published in the specified year from the NVD CVE feeds API.
@@ -203,8 +178,10 @@ def get_cves_by_year(year):
                 # Extract the list of CVEs from the response JSON
                 data = response.json()
                 create_objects(data)
-                print(f"There were {len(data['vulnerabilities'])} vulnerabilities in this response page.")
-                print(f"There were {params['resultsPerPage']} results configured with params.")
+                print(
+                    f"There were {len(data['vulnerabilities'])} vulnerabilities in this response page.")
+                print(
+                    f"There were {params['resultsPerPage']} results configured with params.")
                 # Check if there are any more pages of results
                 if len(data['vulnerabilities']) < params['resultsPerPage']:
                     break
