@@ -84,12 +84,12 @@ def create_objects(data):
                 if nvd_data:
                     cvss = attack_vector = cvss_version = None
                     try:
-                        cvss = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore'],
+                        cvss = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['baseScore'],                        
                         cvss_version = '3.1'
                         attack_vector = nvd_data['cve']['metrics']['cvssMetricV31'][0]['cvssData']['attackVector'],
-                    except KeyError as e:  # it didn't find CVSS v3.1, try for v2
+                    except KeyError as e:  # it did
                         logger.warning('no cvss 3.1')
-                        logger.warning(str(e))
+                        logger.warning(f"{str(e)} for cve {nvd_data['cve']['id']}")
                         pass
                     try:
                         logger.warning(
@@ -101,7 +101,11 @@ def create_objects(data):
                         logger.warning('no cvss 2')
                         logger.warning(str(e))
                         pass
-
+                    kev = item['cve'].get('cisaExploitAdd')
+                    if kev:
+                        kev = True
+                    else: 
+                        kev = False
                     Vulnerability.objects.create(
                         cve_id=item['cve']['id'],
                         epss=get_EPSS(item['cve']['id']),
@@ -111,7 +115,7 @@ def create_objects(data):
                         attack_vector=attack_vector,
                         date_discovered=datetime.datetime.strptime(
                             item['cve']['published'].split('T')[0], '%Y-%m-%d').date(),
-                        KEV=True,
+                        KEV=kev,
                         exploit_db=exploit_db_poc(item['cve']['id'])
                     )
                 # Add 6" sleep to avoid being throttled out by NIST's API
@@ -215,7 +219,11 @@ def get_one_by_CVE(cve):
             logger.warning('no cvss 2')
             logger.warning(str(e))
             pass
-
+        kev = nvd_data['cve'].get('cisaExploitAdd')
+        if kev:
+            kev = True
+        else: 
+            kev = False
         v = Vulnerability.objects.create(
             cve_id=cve,
             epss=get_EPSS(cve),
@@ -225,7 +233,7 @@ def get_one_by_CVE(cve):
             attack_vector=attack_vector,
             date_discovered=datetime.datetime.strptime(
                 nvd_data['cve']['published'].split('T')[0], '%Y-%m-%d').date(),
-            KEV=True,
+            KEV=kev,
             exploit_db=exploit_db_poc(cve)
         )
         return v
